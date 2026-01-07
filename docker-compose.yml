@@ -1,5 +1,4 @@
 services:
-  # Database Service
   db:
     image: postgres:15
     container_name: vaultcore_db
@@ -10,10 +9,8 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      # Initialize database using the SQL script
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
 
-  # Backend Service
   backend:
     build: ./backend
     container_name: vaultcore_backend
@@ -22,13 +19,11 @@ services:
     depends_on:
       - db
     environment:
-      # Connect to the 'db' service defined above
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/VaultCore
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: 140905
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
 
-  # Frontend Service
   frontend:
     build: ./frontend
     container_name: vaultcore_frontend
@@ -37,5 +32,4 @@ services:
     depends_on:
       - backend
     environment:
-      # Enable polling for hot-reload support on Windows
-      - CHOKIDAR_USEPOLLING=true
+      CHOKIDAR_USEPOLLING: "true"

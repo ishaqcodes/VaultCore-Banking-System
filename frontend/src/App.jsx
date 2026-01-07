@@ -1,14 +1,22 @@
-import React from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Login from "./components/login/Login";
-import Welcome from "./components/welcome/Welcome"; // Nayi file import ki
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import Login from "./pages/Login";
+import Signup from "./pages/Signup";
+import Dashboard from "./pages/Dashboard";
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Login />} />
-        <Route path="/welcome" element={<Welcome />} />
+        {/* Default Route: Redirect root to Login */}
+        <Route path="/" element={<Navigate to="/login" replace />} />
+
+        {/* Authentication Routes (Public) */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
+
+        {/* Application Routes */}
+        {/* Note: In a production app, wrap this in a <ProtectedRoute> component */}
+        <Route path="/dashboard" element={<Dashboard />} />
       </Routes>
     </BrowserRouter>
   );

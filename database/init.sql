@@ -1,51 +1,74 @@
--- 1. Create Tables
-CREATE TABLE IF NOT EXISTS users (
+-- =============================================
+-- Database Schema for VaultCore Banking System
+-- Database: PostgreSQL
+-- =============================================
+
+-- 1. Cleanup: Remove existing tables if they exist (Order matters due to Foreign Keys)
+DROP TABLE IF EXISTS holdings CASCADE;
+DROP TABLE IF EXISTS transactions CASCADE;
+DROP TABLE IF EXISTS accounts CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
+
+-- 2. Users Table
+-- Stores authentication and profile details
+CREATE TABLE users (
     id SERIAL PRIMARY KEY,
-    username VARCHAR(255) UNIQUE NOT NULL,
-    password VARCHAR(255) NOT NULL
+    username VARCHAR(50) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL, -- Stores BCrypt hash
+    email VARCHAR(100) UNIQUE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS accounts (
-    account_id SERIAL PRIMARY KEY,
-    user_id INT NOT NULL UNIQUE,
+-- 3. Accounts Table
+-- Links a user to their financial balance
+CREATE TABLE accounts (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER UNIQUE NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     account_number VARCHAR(20) UNIQUE NOT NULL,
     current_balance DECIMAL(15, 2) DEFAULT 0.00 CHECK (current_balance >= 0),
-    CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES users(id)
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS transactions (
-    transaction_id SERIAL PRIMARY KEY,
-    account_id INT NOT NULL,
-    amount DECIMAL(15, 2) NOT NULL,
-    transaction_type VARCHAR(10) NOT NULL CHECK (transaction_type IN ('CREDIT', 'DEBIT')),
+-- 4. Transactions Table
+-- Records all fund transfers and stock purchases
+CREATE TABLE transactions (
+    id SERIAL PRIMARY KEY,
+    sender_account_id INTEGER REFERENCES accounts(id),
+    receiver_account_id INTEGER REFERENCES accounts(id), -- Nullable for Stock Buys
+    amount DECIMAL(15, 2) NOT NULL CHECK (amount > 0),
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_account FOREIGN KEY (account_id) REFERENCES accounts(account_id)
+    status VARCHAR(255) -- Increased length to accommodate descriptive status messages
 );
 
--- 2. Create Triggers (Auto Balance Update)
-CREATE OR REPLACE FUNCTION update_balance_logic() RETURNS TRIGGER AS $$
-BEGIN
-    IF NEW.transaction_type = 'CREDIT' THEN
-        UPDATE accounts SET current_balance = current_balance + NEW.amount WHERE account_id = NEW.account_id;
-    ELSIF NEW.transaction_type = 'DEBIT' THEN
-        UPDATE accounts SET current_balance = current_balance - NEW.amount WHERE account_id = NEW.account_id;
-    END IF;
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
+-- 5. Holdings Table
+-- Stores stock market portfolio for the user
+CREATE TABLE holdings (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    stock_symbol VARCHAR(20) NOT NULL, -- e.g., "VAULT", "AAPL"
+    quantity INTEGER NOT NULL CHECK (quantity > 0),
+    avg_buy_price DECIMAL(15, 2) NOT NULL
+);
 
-DROP TRIGGER IF EXISTS auto_update_balance ON transactions;
-CREATE TRIGGER auto_update_balance AFTER INSERT ON transactions FOR EACH ROW EXECUTE FUNCTION update_balance_logic();
+-- =============================================
+-- Seed Data (Optional - For Testing)
+-- =============================================
 
--- 3. Prevent Update/Delete on Transactions
-CREATE OR REPLACE RULE prevent_update AS ON UPDATE TO transactions DO INSTEAD NOTHING;
-CREATE OR REPLACE RULE prevent_delete AS ON DELETE TO transactions DO INSTEAD NOTHING;
+-- Insert Demo Users
+INSERT INTO users (username, password, email) VALUES 
+('ishaq', '$2a$10$wW/wP7gD.A2gM2.j3y5WZO.2.X3y.X3y.X3y.X3y.X3y.X3y', 'ishaq@gmail.com'), -- Password should be hashed
+('heena', '$2a$10$wW/wP7gD.A2gM2.j3y5WZO.2.X3y.X3y.X3y.X3y.X3y.X3y', 'heena@gmail.com');
 
--- 4. Dummy Data Insert (Users & Accounts)
-INSERT INTO users (username, password) VALUES 
-('ishaq', '123'), ('admin', '123'), ('student', '123')
-ON CONFLICT (username) DO NOTHING;
-
+-- Insert Demo Accounts (Linking by Subquery)
 INSERT INTO accounts (user_id, account_number, current_balance) VALUES 
-(1, 'ACC-1001', 5000.00), (2, 'ACC-ADMIN', 100000.00)
-ON CONFLICT (user_id) DO NOTHING;
+((SELECT id FROM users WHERE username='ishaq'), 'ACC-ISHAQ-786', 50000.00),
+((SELECT id FROM users WHERE username='heena'), 'ACC-HEENA-01', 1000.00);
+
+-- Insert Demo Transaction
+INSERT INTO transactions (sender_account_id, receiver_account_id, amount, status) VALUES
+(
+    (SELECT id FROM accounts WHERE account_number='ACC-ISHAQ-786'),
+    (SELECT id FROM accounts WHERE account_number='ACC-HEENA-01'),
+    500.00,
+    'TRANSFER_SUCCESS'
+);

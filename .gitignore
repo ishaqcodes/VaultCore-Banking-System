@@ -1,23 +1,12 @@
-# Dependency directories
 node_modules/
 target/
-
-# OS generated files
 .DS_Store
 Thumbs.db
-
-# Environment variables
 .env
-
-# IDE files
 .vscode/
 .idea/
 *.iml
-
-# Java compiled files
 *.class
 *.log
 *.jar
-
-# Docker
 docker-compose.override.yml

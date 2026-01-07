@@ -1,32 +1,33 @@
 package com.login.loginBackend.service;
 
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.io.Decoders;
+import io.jsonwebtoken.security.Keys;
+import org.springframework.stereotype.Service;
+
 import java.security.Key;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
-import org.springframework.stereotype.Service;
-
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
-import io.jsonwebtoken.io.Decoders;
-import io.jsonwebtoken.security.Keys;
-
 @Service
 public class JwtUtil {
 
+    // Note: In a production environment, this key should be stored in application.properties
     private static final String SECRET = "5367566B59703373367639792F423F4528482B4D6251655468576D5A71347437";
 
     public String generateAccessToken(String username) {
-        Map<String, Object> claims = new HashMap<>();
-        return createToken(claims, username, 1000 * 60 * 2); // 2 Minutes
+        // FIX: Access token validity increased to 10 HOURS
+        // 1000 ms * 60 sec * 60 min * 10 hours
+        return createToken(new HashMap<>(), username, 1000 * 60 * 60 * 10);
     }
 
     public String generateRefreshToken(String username) {
-        Map<String, Object> claims = new HashMap<>();
-        return createToken(claims, username, 1000 * 60 * 60 * 24 * 7); // 7 Days
+        // Refresh token validity: 7 days
+        return createToken(new HashMap<>(), username, 1000 * 60 * 60 * 24 * 7);
     }
 
     private String createToken(Map<String, Object> claims, String subject, long expirationTime) {
